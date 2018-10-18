@@ -57,7 +57,8 @@ func (m *mockFProcessorForHTTP) Process(iprot, oprot *FProtocol) error {
 	return nil
 }
 
-func (m *mockFProcessorForHTTP) AddMiddleware(middleware ServiceMiddleware) {}
+func (m *mockFProcessorForHTTP) AddExceptionHandler(handler ExceptionHandler) {}
+func (m *mockFProcessorForHTTP) AddMiddleware(middleware ServiceMiddleware)   {}
 
 func (m *mockFProcessorForHTTP) Annotations() map[string]map[string]string {
 	return nil

@@ -89,4 +89,5 @@ func (p *mockProcessor) Process(in, out *FProtocol) error {
 	return nil
 }
 
-func (p *mockProcessor) AddMiddleware(middleware ServiceMiddleware) {}
+func (m *mockProcessor) AddExceptionHandler(handler ExceptionHandler) {}
+func (p *mockProcessor) AddMiddleware(middleware ServiceMiddleware)   {}

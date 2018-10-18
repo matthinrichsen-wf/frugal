@@ -81,6 +81,7 @@ func (p *processor) Process(in, out *FProtocol) error {
 	return nil
 }
 
+func (p *processor) AddExceptionHandler(ExceptionHandler)       {}
 func (p *processor) AddMiddleware(middleware ServiceMiddleware) {}
 
 func (p *processor) Annotations() map[string]map[string]string {

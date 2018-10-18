@@ -47,7 +47,8 @@ func (p *pingProcessor) Process(ctx FContext, iprot, oprot *FProtocol) error {
 	return p.err
 }
 
-func (p *pingProcessor) AddMiddleware(ServiceMiddleware) {}
+func (p *pingProcessor) AddExceptionHandler(ExceptionHandler) {}
+func (p *pingProcessor) AddMiddleware(ServiceMiddleware)      {}
 
 // Ensures FBaseProcessor invokes the correct FProcessorFunction and returns
 // nil on success.

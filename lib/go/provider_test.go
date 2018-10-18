@@ -67,6 +67,7 @@ func (m *mockFProcessor) Process(in, out *FProtocol) error {
 }
 
 func (m *mockFProcessor) AddMiddleware(middleware ServiceMiddleware) {}
+func (p *mockFProcessor) AddExceptionHandler(ExceptionHandler)       {}
 
 func (m *mockFProcessor) Annotations() map[string]map[string]string {
 	return m.Called().Get(0).(map[string]map[string]string)

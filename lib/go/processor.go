@@ -14,10 +14,14 @@
 package frugal
 
 import (
+	"errors"
 	"sync"
 
 	"git.apache.org/thrift.git/lib/go/thrift"
+	"github.com/Sirupsen/logrus"
 )
+
+type ExceptionHandler func(ctx FContext, r interface{})
 
 // FProcessor is Frugal's equivalent of Thrift's TProcessor. It's a generic
 // object which operates upon an input stream and writes to an output stream.
@@ -32,6 +36,10 @@ type FProcessor interface {
 	// should only be called before the server is started.
 	AddMiddleware(ServiceMiddleware)
 
+	// AddExceptionHandler adds the given ExceptionHandler to the FProcessor. This
+	// should only be called before the server is started.
+	AddExceptionHandler(ExceptionHandler)
+
 	// Annotations returns a map of method name to annotations as defined in
 	// the service IDL that is serviced by this processor.
 	Annotations() map[string]map[string]string
@@ -41,9 +49,10 @@ type FProcessor interface {
 // embed this and register FProcessorFunctions. This should only be used by
 // generated code.
 type FBaseProcessor struct {
-	writeMu        sync.Mutex
-	processMap     map[string]FProcessorFunction
-	annotationsMap map[string]map[string]string
+	writeMu          sync.Mutex
+	processMap       map[string]FProcessorFunction
+	annotationsMap   map[string]map[string]string
+	exceptionHandler ExceptionHandler
 }
 
 // NewFBaseProcessor returns a new FBaseProcessor which FProcessors can extend.
@@ -51,16 +60,42 @@ func NewFBaseProcessor() *FBaseProcessor {
 	return &FBaseProcessor{
 		processMap:     make(map[string]FProcessorFunction),
 		annotationsMap: make(map[string]map[string]string),
+		exceptionHandler: func(ctx FContext, r interface{}) {
+			logger().WithFields(logrus.Fields{
+				`correlationID`: ctx.CorrelationID(),
+				`panic`:         r,
+			}).Error(`unhandled exception has occurred`)
+		},
+	}
+}
+
+func (f *FBaseProcessor) AddExceptionHandler(handler ExceptionHandler) {
+	previousHandler := f.exceptionHandler
+
+	f.exceptionHandler = func(ctx FContext, r interface{}) {
+		previousHandler(ctx, r)
+		handler(ctx, r)
 	}
 }
 
 // Process the request from the input protocol and write the response to the
 // output protocol.
-func (f *FBaseProcessor) Process(iprot, oprot *FProtocol) error {
+func (f *FBaseProcessor) Process(iprot, oprot *FProtocol) (err error) {
 	ctx, err := iprot.ReadRequestHeader()
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			f.exceptionHandler(ctx, r)
+
+			if err == nil {
+				err = errors.New(`processor encountered an unexpected error`)
+			}
+		}
+	}()
+
 	name, _, _, err := iprot.ReadMessageBegin()
 	if err != nil {
 		return err
